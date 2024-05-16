@@ -1,42 +1,27 @@
 #Requires AutoHotkey v2.0
 var := FileRead("data_in.txt")
-Loop Parse var, "`n", "`r"
+data_out := "data_out.csv"
+if FileExist(data_out)
 {
-    if (RegExMatch(A_LoopField, "[0-9]{4}-[0-9]{2}-[0-9]{2}"))
-    {
-        var := A_LoopField
-        var := RegExReplace(var, "[ \t]", " ")
-        var := RegExReplace(var, "  ", " ")
-        RegExMatch(var,"([0-9]{4}-[0-9]{2}-[0-9]{2}) (.*)(-[0-9]{1,},[0-9]{2}) PLN|([0-9]{4}-[0-9]{2}-[0-9]{2}) (.*)([0-9]{1,},[0-9]{2}) PLN", &field)
-        field[1] != "" ? data := field[1] : data := field[4]
-        field[2] != "" ? tytul := field[2] : tytul := field[5]
-        field[3] != "" ? kwota := field[3] : kwota := field[6]
-        FileAppend data . ";" . tytul . ";" . kwota . "`n", "data_out.csv"
-    }
+    FileDelete(data_out)
 }
 
-/*
-RegExMatch(var,"^([0-9]{4}-[0-9]{2}-[0-9]{2});.*?;(.*?);(.*?);.*?;.*?;.*?;.*?;(.*?);.*?;(.*?);", &field)
-        ;Kwota
-        if (field[4] == "")
-        {
-            kwota := field[5]
-        } else {
-            kwota := field[4]
-        }
-        ;Tytuł transakcji jeżeli blik lub karta
-        tytul1 := field[2]
-        tytul1 := RegExReplace(tytul1, "^\s", "")
-        tytul1 := RegExReplace(tytul1, "\s$", "")
-        tytul1 := RegExReplace(tytul1, "  ", " ")
-        If (RegExMatch(field[3], "blik|kartą|BLIK"))
-        {
-            tytul := tytul1
-        } else {
-            tytul2 := field[3]
-            tytul2 := RegExReplace(tytul2, "^\s", "")
-            tytul2 := RegExReplace(tytul2, "\s$", "")
-            tytul := tytul1 . " " . tytul2
-        }
-        FileAppend field[1] . ";" . kwota . ";" . tytul . "`n", "convert.csv"
-*/
+Loop Parse var, "`n", "`r"
+{
+    var_array := StrSplit(A_LoopField, ";")
+    date := var_array[1]
+    text := var_array[3]
+    company := var_array[4]
+    kwota := var_array[6]
+    if(text ~= "DOP.")
+    {
+        text := RegExReplace(text,"DOP\..*PLN ","")
+        FileAppend(date . ";" . text . ";" . kwota . "`n", data_out)
+    } else if(text = "Płatność BLIK") {
+        RegExReplace(text,"^.*transakcji [0-9]{1,} (.*)","",&text)
+
+        FileAppend(date . ";" . company . " " . text[1] . ";" . kwota . "`n", data_out)
+    } else {
+        FileAppend(date . ";" . company . " " . text . ";" . kwota . "`n", data_out)
+    }
+}
